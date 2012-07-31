@@ -1,0 +1,48 @@
+{
+    "exclude_entities" : [
+                          "Terrain"
+                          ],
+    "excluded_attributes" : {
+        "Observation" : [
+            "locked",
+            "source",
+            "owned",
+            "synced",
+            "needsLoading"
+        ],
+        "Media" : [
+            "imageData",
+            "thumbnailData",
+            "GPSLocation",
+            "filePath"
+        ],
+        "Rating" : [
+            "myImportance",
+            "myQuality"
+        ],
+        "Location" : [
+            "distanceFromCurrentLocation"
+        ]
+    },
+    "id_fields":{
+        "Observation" : "observation_id"
+    },
+    "excluded_relationships" : {},
+    "has_children" : [
+                      "AvalancheOccurence",
+                      "Observation"
+                      ],
+    "parent_object" : [
+                       "Observation"
+                       ],
+    "data_model" : "/Users/jesse/projects/pitPod/PitPod/PitPod.xcdatamodeld/PitPod 10.xcdatamodel/contents",
+    "sql_schema_file" : "model.sql",
+    "json_model_file" : "model.json",
+    "database":{
+        "server" : "localhost",
+        "database" : "AvyLab",
+        "user" : "jesse",
+        "password" : "VoySwypIOw7quoicOfDi"
+    },
+    "secret":"mojo secret"
+}
