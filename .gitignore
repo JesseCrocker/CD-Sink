@@ -2,3 +2,5 @@
 workspace.xcworkspace
 model.json
 model.sql
+*.log
+*~

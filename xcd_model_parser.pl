@@ -266,11 +266,11 @@ sub generate_sql{
         
         my %relationships = %{$entity{"relationships"}};
 
-        my $id_field = $config{"id_fields"}->{$entity_name};
+        my $id_field = $config{"primary_keys"}->{$entity_name};
         if(!$id_field){
             $id_field = $entity_name . "_id";
         }
-        $model{$entity_name}->{"id_field"} = $id_field;
+        $model{$entity_name}->{"primary_key"} = $id_field;
         
         print schemaSQL "CREATE TABLE $entity_name (\n";
         print schemaSQL "\t$id_field INT AUTO_INCREMENT PRIMARY KEY,\n";

@@ -24,7 +24,7 @@
             "distanceFromCurrentLocation"
         ]
     },
-    "id_fields":{
+    "primary_keys":{
         "Observation" : "observation_id"
     },
     "excluded_relationships" : {},

@@ -40,7 +40,14 @@ create table messages(
 create table deletions(
     entity varchar(100),
     object_id INT,
-    user_id INT,
+    userid INT,
+    date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+);
+
+create table modifications(
+    entity varchar(100),
+    object_id INT,
+    userid INT,
     date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
 

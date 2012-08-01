@@ -36,3 +36,8 @@ Authen::Passphrase::BlowfishCrypt
 XML::Simple
 JSON
 Mojolicious
+
+routes for sync:
+/deletes
+/changes - inserts and updates
+/log - changes and deletes

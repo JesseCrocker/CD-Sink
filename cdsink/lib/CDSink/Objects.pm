@@ -8,7 +8,7 @@ sub objects_list{
     my $self = shift;
     my $userid = $self->session('userid');
     my $entity = $self->param('entity');
-    my $id_field = $self->app->CDconfig->{"entities"}->{$entity}->{"id_field"};
+    my $id_field = $self->app->object_manager->primaryKeyForEntity( $entity );
     my $sql = "SELECT $id_field FROM $entity WHERE userid=?";
     $self->app->log->debug("$sql");
     my $sth = $self->app->dbh->prepare($sql);
@@ -32,7 +32,7 @@ sub post_object{
         my $object = Mojo::JSON->decode( $self->req->body);
         my $insert_id = $self->object_manager->post_object($entity, $object, $userid);
         if($insert_id > 0){
-            my $id_field = $self->CDconfig->{"entities"}->{$entity}->{'id_field'};
+            my $id_field = $self->object_manager->primaryKeyForEntity($entity);
             $self->render(json=>{$entity => {$id_field => $insert_id}}, status=>201);
         }else{
             $self->render(json=>{error => "error inserting $entity"}, status=>500);
@@ -110,5 +110,7 @@ sub delete_object{
     }
 
 }
+
+
 
 1;

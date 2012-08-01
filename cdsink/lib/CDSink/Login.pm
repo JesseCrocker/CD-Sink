@@ -71,20 +71,16 @@ sub get_user_info {
     my $self = shift;
     return $self->render(json => {error => "Not Logged In"}, status=>401) unless $self->session('userid');
     
-    my $userid = $self->param('user_id');
+    my $userid = $self->param('userid');
     my $userinfo = $self->users->user_info($userid, 0);
     $self->render(json => $userinfo, status=>200);
 }
 
-
-sub deletions_for_user{
+sub update_user{
     my $self = shift;
     return $self->render(json => {error => "Not Logged In"}, status=>401) unless $self->session('userid');
     
-    my $userid = $self->session('userid');
-    my $sth = $self->app->dbh->prepare("SELECT entity, object_id, date FROM deletions WHERE user_id=?");
-    $sth->execute($userid);
-    $self->render(json => $sth->fetchall_arrayref, status=>200);
+    
 }
 
 1;

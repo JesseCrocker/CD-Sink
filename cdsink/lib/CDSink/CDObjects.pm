@@ -4,13 +4,24 @@ use Data::Dumper;
 
 sub new { bless {}, shift }
 
+sub inverse_for_relationship($){
+    my ($self, $relationship) = @_;
+    return $self->{"CDconfig"}->{"entities"}->{ $relationship->{"type"} }->{"relationships"}->{$relationship->{"inverse_name"}};
+}
+
+sub primaryKeyForEntity($){
+    my ($self, $entity) = @_;
+    my $key = $self->{"CDconfig"}->{"entities"}->{$entity}->{"primary_key"};
+    return $key;
+}
+
 sub object_exists($$){
     #return userid
     #0 means doesnt exist
     #-1 bad id
     my ($self, $entity, $object_id) = @_;
     return -1 unless $observation_id;
-    my $id_field = $self->{"CDconfig"}->{"entities"}->{$entity}->{"id_field"};
+    my $id_field = $self->primaryKeyForEntity($entity);
     my $sth = $self->dbh->prepare("select $id_field from $entity where $id_field like ?");
     if($sth->exectute($object_id)){
         my ($id) = $sth->fetchrow_array;
@@ -23,7 +34,7 @@ sub get_object($$$){
     #return a hashref
     my ($self, $entity, $object_id, $ignore_relationship) = @_;
 
-    my $id_field = $self->{"CDconfig"}->{"entities"}->{$entity}->{"id_field"};
+    my $id_field = $self->primaryKeyForEntity($entity);
 
     #print "get_object of type $entity with $id_field=$object_id\n";
     my %entity_config = %{$self->{"CDconfig"}->{"entities"}->{$entity}};
@@ -72,7 +83,7 @@ sub get_object($$$){
             #fetch all ids where the inverse field points to this object
             #iterate through ids, call get_object on each one, excluding the inverse
             my $inverse_field = $inverse{"sql_field"};
-            my $target_id_field = $self->{"CDconfig"}->{"entities"}->{ $r{"type"} }->{"id_field"};
+            my $target_id_field = $self->primaryKeyForEntity($r{"type"});
             if($inverse_field){
                 my $sql = "SELECT $target_id_field FROM " . $r{"type"} . " WHERE $inverse_field=?";
                 # print "$sql\n";
@@ -177,18 +188,17 @@ sub post_object($$){
     
     if(@relationship_fields){
         my $field_placeholders = join ", ", map {"$_=?"} @relationship_fields;
-        my $sql = "update $entity SET $field_placeholders where " . $entity_config{"id_field"} . "=$insert_id";
+        my $sql = "update $entity SET $field_placeholders where " . $self->primaryKeyForEntity($entity) . "=$insert_id";
         my $sth = $self->{dbh}->prepare($sql);
         $sth->execute(@relationship_ids);
     }
     
+    $self->update_modification_table($entity, $insert_id, $userid);
+    
     return $insert_id;
 }
 
-sub inverse_for_relationship($){
-    my ($self, $relationship) = @_;
-    return $self->{"CDconfig"}->{"entities"}->{ $relationship->{"type"} }->{"relationships"}->{$relationship->{"inverse_name"}};
-}
+
 
 sub update_object($$){
     my ($self, $entity, $object_id) = @_;
@@ -199,11 +209,10 @@ sub delete_object($$$){
     #return 1 if success, 0 if object not found
 
     my ($self, $entity, $object_id, $userid) = @_;
-    my %entity_config = %{$self->{"CDconfig"}->{"entities"}->{$entity}};
+        
+    my $id_field = $self->primaryKeyForEntity($entity);
     
-    my $id_field = $self->{"CDconfig"}->{"entities"}->{$entity}->{"id_field"};
-    
-    #print "get_object of type $entity with $id_field=$object_id\n";
+    #print "delete_object of type $entity with $id_field=$object_id\n";
     my %entity_config = %{$self->{"CDconfig"}->{"entities"}->{$entity}};
     if(!%entity_config){
         $self->log->error("could not find config for entity $entity");
@@ -222,13 +231,12 @@ sub delete_object($$$){
     }
     
     #delete from db
-    my $sql = "DELETE FROM $entity WHERE $id_field=?";
+    $sql = "DELETE FROM $entity WHERE $id_field=?";
     $sth = $self->{dbh}->prepare($sql);
     $sth->execute($object_id);
     
     #make entry in deletions table
-    $sth = $self->{dbh}->prepare("INSERT INTO deletions (entity, object_id, user_id) values(?, ?, ?)");
-    $sth->execute($entity, $object_id, $userid);
+    $self->add_to_deletion_table($entity, $object_id, $userid);
     
     #go through relationships
     #if there is a cascade, nullify the inverse before cascading
@@ -239,7 +247,7 @@ sub delete_object($$$){
         my %inverse = %{$self->inverse_for_relationship(\%r)};
         if($r{"to_many"}){
             my $inverse_field = $inverse{"sql_field"};
-            my $target_id_field = $self->{"CDconfig"}->{"entities"}->{ $r{"type"} }->{"id_field"};
+            my $target_id_field = $self->primaryKeyForEntity( $r{"type"} );
             if($inverse_field){
                 my $sql = "SELECT $target_id_field FROM $r{'type'} WHERE $inverse_field=?";
                 my $sth = $self->{dbh}->prepare($sql);
@@ -282,13 +290,78 @@ sub delete_object($$$){
 sub nullify_relationship_target($$){
     my ($self, $relationship, $target_id) = @_;
     my %inverse = %{$self->inverse_for_relationship($relationship)};
-    my $id_field = $self->{"CDconfig"}->{"entities"}->{ $inverse{"type"} }->{"id_field"};
+    my $id_field = $self->primaryKeyForEntity( $inverse{"type"} );
 
     if($inverse{'sql_field'}){
         my $sql = "UPDATE $relationship->{'type'} SET $inverse{'sql_field'}=0 where $id_field=?";
         my $sth = $self->{dbh}->prepare($sql);
         $sth->execute($target_id);
     }
+}
+
+sub add_to_deletion_table($$$){
+    my ($self, $entity, $object_id, $userid) = @_;
+    my $sth = $self->{dbh}->prepare("INSERT INTO deletions (entity, object_id, userid) values(?, ?, ?)");
+    $sth->execute($entity, $object_id, $userid);
+
+    #clear out all modification logs on deleted objects
+    $sth = $self->{dbh}->prepare("DELETE FROM modifications WHERE entity=? AND object_id=?");
+    $sth->execute($entity, $object_id);
+}
+
+sub update_modification_table($$$){
+    my ($self, $entity, $object_id, $userid) = @_;
+    
+    #clear out previous logs for this object
+    $sth = $self->{dbh}->prepare("DELETE FROM modifications WHERE entity=? AND object_id=?");
+    $sth->execute($entity, $object_id);
+    
+    $sth = $self->{dbh}->prepare("INSERT INTO modifications (entity, object_id, userid) values(?, ?, ?)");
+    $sth->execute($entity, $object_id, $userid);
+}
+
+sub changes_for_user($$){
+    my ($self, $userid, $date) = @_;
+    
+    my $sql = "SELECT entity, object_id, date FROM modifications WHERE userid=?";
+    my $sth;
+    if($date){
+        $sql .= " and date > ?";
+        $sth = $self->{dbh}->prepare($sql);
+        $sth->execute($userid, $date);
+    }else{
+        $sth = $self->{dbh}->prepare($sql);
+        $sth->execute($userid);
+    }
+    
+    my @changes;
+    while(my $row = $sth->fetchrow_hashref){
+        push @changes, $row;
+    }
+    
+    return \@changes;
+}
+
+sub deletes_for_user($$){
+    my ($self, $userid, $date) = @_;
+    
+    my $sql = "SELECT entity, object_id, date FROM deletions WHERE userid=?";
+    my $sth;
+    if($date){
+        $sql .= " and date > ?";
+        $sth = $self->{dbh}->prepare($sql);
+        $sth->execute($userid, $date);
+    }else{
+        $sth = $self->{dbh}->prepare($sql);
+        $sth->execute($userid);
+    }
+    
+    my @deletes;
+    while(my $row = $sth->fetchrow_hashref){
+        push @deletes, $row;
+    }
+
+    return \@deletes;
 }
 
 1;

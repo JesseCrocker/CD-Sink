@@ -68,12 +68,16 @@ sub new_user($$){
     return 0;
 }
 
+sub update_user{
+    
+}
+
 sub check_authorized($$$$){
     #is the user allowed to modify this observation/comment/whattever
     #return 1 if allowed, 0 if not allowed, -1 if object does not exist
     my ($self, $userid, $method, $entity_name, $object_id) = @_;
     my %entity = %{$self->{"CDconfig"}->{"entities"}->{$entity_name}};
-    my $id_field = $entity{"id_field"};
+    my $id_field = $entity{"primary_key"};
     
     if($method eq "POST"){
         if($userid){
@@ -129,11 +133,10 @@ sub delete_user($){
     $sth->execute($userid);
 }
 
-
 sub user_info($$){
-    my ($self, $userid, $push) = @_;
+    my ($self, $userid, $me) = @_;
     my $sth;
-    if($push){
+    if($me){
         $sth = $self->{dbh}->prepare('select userid, email, display_name, image_url, orginization, profile, push_messages, rating from users where userid like ?');
     }else{
         $sth = $self->{dbh}->prepare("select userid, email, display_name, image_url, orginization, profile, rating from users where userid like ?");
