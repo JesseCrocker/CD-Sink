@@ -350,7 +350,7 @@ sub generate_json_model{
     }
     open JSON_OUT, ">$outfile" || croak "$!";
     my $model_json = JSON->new->pretty->encode({"entities" => \%model, database => $config{"database"},
-        secret => $config{"secret"} });
+        secret => $config{"secret"}, images => $config{"images"} });
     print JSON_OUT $model_json;
     close JSON_OUT;    
 }

@@ -27,8 +27,12 @@ sub logout {
 
 sub new_user {
     my $self = shift;
-    return $self->render(json=>{error => "Already Logged In"}, status=>400) if $self->session('userid');
-
+    
+    if($self->session('userid')){
+        $self->session(expires => 1);
+        return $self->render(json=>{error => "Already Logged In"}, status=>400) ;
+    }
+    
     my $email = $self->param('email') || '';
     my $password = $self->param('password') || '';
     if(!$email){

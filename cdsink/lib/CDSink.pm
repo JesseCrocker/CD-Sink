@@ -36,9 +36,10 @@ sub startup {
     $self->setup_basic_routes;
     $self->setup_user_routes;
     $self->setup_object_routes;
-    $self->setup_message_routes;
-    $self->setup_rating_routes;
     $self->setup_sync_routes;
+    $self->setup_image_routes;
+    #$self->setup_message_routes;
+    #$self->setup_rating_routes;
 }
 
 sub load_config{
@@ -126,6 +127,12 @@ sub setup_sync_routes{
     $r->get("/changes")->to(controller=>"Sync", action=>"changes_for_user");
     $r->get("/deletes")->to(controller=>"Sync", action=>"deletes_for_user");
     $r->get("/log")->to(controller=>"Sync", action=>"log_for_user");
+}
+
+sub setup_image_routes{
+    my $self = shift;
+    my $r = $self->routes;
+    $r->post("/imageUpload")->to(controller=>"Images", action=>"image_upload");
 }
 
 sub setup_message_routes{

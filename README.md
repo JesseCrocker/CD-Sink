@@ -32,12 +32,13 @@ Start CDSink: /script/cdsink daemon
 Refer to Mojolicious documentation for information about deploying mojolicious.
 
 perl modules needed:
+Mojolicious
 DBI
 DBD::mysql
 Authen::Passphrase::BlowfishCrypt
 XML::Simple
 JSON
-Mojolicious
+Data::UUID
 
 routes for sync:
 /deletes

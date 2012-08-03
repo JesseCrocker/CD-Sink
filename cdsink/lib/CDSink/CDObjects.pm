@@ -15,6 +15,22 @@ sub primaryKeyForEntity($){
     return $key;
 }
 
+sub is_entity_valid($){
+    my ($self, $entity) = @_;
+    if($self->{"CDconfig"}->{"entities"}->{$entity}){
+        return 1;
+    }
+    return 0;
+}
+
+sub is_attribute_valid($$){
+    my ($self, $entity, $attribute) = @_;
+    if($self->{"CDconfig"}->{"entities"}->{$entity}->{"attributes"}->{$attribute} ){
+        return 1;
+    }
+    return 0;
+}
+
 sub object_exists($$){
     #return userid
     #0 means doesnt exist
