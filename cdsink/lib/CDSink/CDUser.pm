@@ -68,8 +68,14 @@ sub new_user($$){
     return 0;
 }
 
-sub update_user{
-    
+sub change_password($$){
+    my ($self, $userid, $password) = @_;
+    if(!$password){
+        return;
+    }
+    my $hash = $self->hash_new_password($password);
+    my $sth = $self->{dbh}->prepare("UPDATE users set password=?, salt=? where userid=?");
+    $sth->execute($hash->hash_base64, $hash->salt_base64, $userid);
 }
 
 sub check_authorized($$$$){
@@ -131,6 +137,13 @@ sub delete_user($){
     $sth->execute($userid);
     $sth = $self->{dbh}->prepare("DELETE from users where userid like ?");
     $sth->execute($userid);
+}
+
+sub login_info($){
+    my ($self, $userid) = @_;
+    my $sth = $self->{dbh}->prepare('select userid, username, push_messages from users where userid like ?');
+    $sth->execute($userid);
+    return $sth->fetchrow_hashref;
 }
 
 1;

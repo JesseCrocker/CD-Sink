@@ -111,10 +111,9 @@ sub setup_object_routes{
 sub setup_user_routes{
     my $self = shift;
     my $r = $self->routes;
-    $r->get('/user')->to(controller => "Login", action=>"get_current_user_info");
-    $r->get('/user/:userid')->to(controller => "Login", action=>"get_user_info");
+    $r->get('/user')->to(controller => "Login", action=>"get_login_info");
     $r->post('/user')->to(controller => "Login", action=>"new_user");
-    $r->put('/user')->to(controller => "Login", action=>"new_user");
+    $r->put('/user')->to(controller => "Login", action=>"update_user");
     $r->any('/login')->to(controller => "Login", action=>"login");
     $r->any('/logout')->to(controller => "Login", action=>"logout");
     $r->delete('/user')->to(controller => "Login", action=>"delete_user");
@@ -123,9 +122,10 @@ sub setup_user_routes{
 sub setup_sync_routes{
     my $self = shift;
     my $r = $self->routes;
+    $r->get("/inserts")->to(controller=>"Sync", action=>"deletes_for_user");
+    $r->get("/changes")->to(controller=>"Sync", action=>"changes_for_user");
     $r->get("/deletes")->to(controller=>"Sync", action=>"deletes_for_user");
     $r->get("/log")->to(controller=>"Sync", action=>"log_for_user");
-    $r->get("/changes")->to(controller=>"Sync", action=>"changes_for_user");
 }
 
 sub setup_message_routes{

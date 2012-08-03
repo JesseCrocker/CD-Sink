@@ -58,21 +58,12 @@ sub delete_user {
     $self->render(json=>{message=>"User deleted"}, status=>200);
 }
 
-sub get_current_user_info {
+sub get_login_info {
     my $self = shift;
     return $self->render(json => {error => "Not Logged In"}, status=>401) unless $self->session('userid');
     
     my $userid = $self->session('userid');
-    my $userinfo = $ self->users->user_info($userid, 1);
-    $self->render(json => $userinfo, status=>200);
-}
-
-sub get_user_info {
-    my $self = shift;
-    return $self->render(json => {error => "Not Logged In"}, status=>401) unless $self->session('userid');
-    
-    my $userid = $self->param('userid');
-    my $userinfo = $self->users->user_info($userid, 0);
+    my $userinfo = $self->users->login_info($userid);
     $self->render(json => $userinfo, status=>200);
 }
 
@@ -80,7 +71,14 @@ sub update_user{
     my $self = shift;
     return $self->render(json => {error => "Not Logged In"}, status=>401) unless $self->session('userid');
     
-    
+    my $userid = $self->session('userid');
+    my $password = $self->param('password');
+    my $push = $self->param('push');
+    if($password){
+        $self->users->change_password($userid, $password);
+        $self->render(json=>{message=>"password changed"}, status=>200);
+    }
+    $self->render(json=>{message=>"nothing changed"}, status=>200);
 }
 
 1;

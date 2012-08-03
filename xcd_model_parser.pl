@@ -276,7 +276,7 @@ sub generate_sql{
         print schemaSQL "CREATE TABLE $entity_name (\n";
         print schemaSQL "\t$id_field INT AUTO_INCREMENT PRIMARY KEY,\n";
         
-        if(is_parent_object($entity_name)){
+        if(is_parent_object($entity_name) && $id_field ne "userid"){
             print schemaSQL "\tuserid INT,\n";
         }
 
@@ -294,12 +294,14 @@ sub generate_sql{
         
         for(my $i = 0; $i <= $#attribute_keys; $i++){
             my $attribute_name = $attribute_keys[$i];
-            if($attribute_name eq $id_field){
-                next;
-            }
         
             my %attribute = %{$attributes{$attribute_name}};
             my $sql_line = "\t" . $attribute{"sql_field"} . " " . $attribute{"type"};
+            
+            if($attribute_name eq $id_field || $attribute{"sql_field"} eq $id_field){
+                next;
+            }
+            
             if(!$attribute{"optional"}){
                 $sql_line .= "NOT NULL";
             }

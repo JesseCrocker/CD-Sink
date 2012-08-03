@@ -198,11 +198,123 @@ sub post_object($$){
     return $insert_id;
 }
 
+sub update_object($$$$){
+    my ($self, $entity, $object_id, $data, $userid) = @_;
+    my %object = %{$data};
+    
+    my %entity_config = %{$self->{"CDconfig"}->{"entities"}->{$entity}};
+    if(!%entity_config){
+        $self->log->error("could not find config for entity $entity");
+        return -1;
+    }
+    my $id_field = $self->primaryKeyForEntity($entity);
 
-
-sub update_object($$){
-    my ($self, $entity, $object_id) = @_;
-
+    my %attributes = %{$entity_config{'attributes'}};
+    
+    my @input_fields = sort(keys %attributes);
+    my @sql_fields;
+    foreach my $field(@input_fields){
+        push(@sql_fields, $entity_config{'attributes'}->{$field}->{"sql_field"});
+    }
+    
+    my @insert_values = @object{@input_fields};
+    
+    if($entity_config{"parent_object"}){
+        push(@sql_fields, "userid");
+        push(@insert_values, $userid)
+    }
+    
+    #fetch a copy of object to use for relationship proccessing
+    my $sql = "SELECT * FROM $entity WHERE $id_field=?";
+    my $sth = $self->{dbh}->prepare($sql);
+    $sth->execute($object_id);
+    my %original_object = %{$sth->fetchrow_hashref};
+    if(!%original_object){
+        #cant update an object that doesnt exist
+        return 0;
+    }
+    
+    my $field_placeholders = join ", ", map {"$_=?"} @sql_fields;
+    my $sql = "UPDATE $entity SET $field_placeholders WHERE $id_field=?";
+    my $sth = $self->{dbh}->prepare($sql);
+    $sth->execute(@insert_values, $object_id);
+    
+    my @relationship_fields;
+    my @relationship_ids;
+    
+    my %relationships = %{$entity_config{'relationships'}};
+    foreach my $r_name(keys(%relationships)){
+        my %r = %{$relationships{$r_name}};
+        my %inverse = %{$self->inverse_for_relationship(\%r)};
+        if(!%inverse){
+            print "ERROR: could not find inverse for relationship $entity:$r_name\n";
+        }
+        if($r{"sql_field"} && $object{$r{"sql_field"}}){
+            #a target id for this relationship is already set, so all we need to do to proccess it is insert it
+            push @relationship_fields, $r{"sql_field"};
+            push @relationship_ids, $object{$r{"sql_field"}};
+        }
+        
+        if($r{"to_many"}){
+            #first delete children, then recreate them
+            my $inverse_field = $inverse{"sql_field"};
+            my $target_id_field = $self->primaryKeyForEntity( $r{"type"} );
+            if($inverse_field){
+                my $sql = "SELECT $target_id_field FROM $r{'type'} WHERE $inverse_field=?";
+                my $sth = $self->{dbh}->prepare($sql);
+                $sth->execute($object_id);
+                my @ids_to_delete = @{$sth->fetchall_arrayref([0])};
+                foreach my $t(@ids_to_delete){
+                    my $id = $t->[0];
+                    if(!$id){
+                        next;
+                    }
+                    $self->nullify_relationship_target(\%r, $id);
+                    $self->delete_object($r{"type"}, $id, $userid);
+                }
+            }
+            
+            #then insert it like its a new object
+            if($object{$r_name}){
+                my @all_o = @{$object{$r_name}};
+                foreach my $o (@all_o){
+                    if($inverse{"sql_field"}){
+                        $o->{$inverse{"sql_field"}} = $insert_id;
+                    }
+                    $self->post_object($r{'type'}, $o, $userid);
+                }
+            }
+        }else{
+            if($object{$r_name}){
+                my $o = $object{$r_name};
+                if($inverse{"sql_field"}){
+                    $o->{$inverse{"sql_field"}} = $object_id;
+                }
+                
+                if($existing_object{ $r{"sql_field"}}){
+                    #child already exists, update it
+                    my $child_id = $existing_object{ $r{"sql_field"}};
+                    $self->update_object($r{'type'}, $child_id, $o, $userid);
+                }else{
+                    #new child
+                    my $r_insert_id = $self->post_object($r{'type'}, $o, $userid);
+                    if($r_insert_id){
+                        push @relationship_fields, $r{"sql_field"};
+                        push @relationship_ids, $r_insert_id;
+                    }
+                }
+            }
+        }
+    }
+   
+    if(@relationship_fields){
+        my $field_placeholders = join ", ", map {"$_=?"} @relationship_fields;
+        my $sql = "update $entity SET $field_placeholders where " . $self->primaryKeyForEntity($entity) . "=$insert_id";
+        my $sth = $self->{dbh}->prepare($sql);
+        $sth->execute(@relationship_ids);
+    }
+    
+    $self->update_modification_table($entity, $object_id, $userid);
 }
 
 sub delete_object($$$){

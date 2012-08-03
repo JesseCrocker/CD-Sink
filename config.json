@@ -24,11 +24,13 @@
             "distanceFromCurrentLocation"
         ],
         "UserInfo" : [
-            "userid"
+            "userid",
+            "owned"
         ]
     },
     "primary_keys":{
-        "Observation" : "observation_id"
+        "Observation" : "observation_id",
+        "UserInfo" : "userid"
     },
     "excluded_relationships" : {},
     "has_children" : [

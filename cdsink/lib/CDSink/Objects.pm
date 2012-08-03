@@ -77,10 +77,16 @@ sub update_object{
         $self->render(json=>{error => "No object specified"}, status=>400);
     }
     
+    if(!$self->object_manager->object_exists($entity, $object_id)){
+        $self->render(json=>{error => "Object does not exist"}, status=>400);
+    }
+    
     if($self->users->check_authorized($userid, "PUT", $entity, $object_id)){
-        
+        my $object = Mojo::JSON->decode( $self->req->body);
+        $self->object_manager->update_object($entity, $object_id, $object, $userid);
+        $self->render(json=>{message => "Object updated"}, status=>202);
     }else{
-        $self->render(json=>{error => "Not authorized to PUT  $entity/$object_id"}, status=>403);
+        $self->render(json=>{error => "Not authorized to PUT $entity/$object_id"}, status=>403);
     }
 }
 

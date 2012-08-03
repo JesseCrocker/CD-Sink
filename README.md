@@ -8,7 +8,7 @@ this ALPHA software that is being actively developed.
 It is not designed with an eye to speed, you might not want to use it for production, but it is great for rapid prototyping.
 
 What it doesn't do yet:
-Updating objects, this will come soon.
+proper handling of too many relations.  every object that points to a too many creates its own copy of that object
 
 What it doesn't do:
 Megring changes to objects.
@@ -26,7 +26,8 @@ If you need sql tables in addition to your model, put them in sql/application.sq
 Proccess your data model: ./xcd_model_parser.pl config.json
 This will generate a SQL schema, you will probably want to edit it, by default all core-data text fields are mapped as varchar(100).
 It will also connect to your SQL server and create tables.
-Start CDSink: ./script/cdsink daemon
+Check out the routes that have been created: ./script/cdsink routes
+Start CDSink: /script/cdsink daemon
 
 Refer to Mojolicious documentation for information about deploying mojolicious.
 
