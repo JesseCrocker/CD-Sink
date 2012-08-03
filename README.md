@@ -22,9 +22,10 @@ Create a Core-Data model in your project.
 Use RestKit(http://restkit.org/) to map your data model to json.  Map all of your attributes and relationships with there original names.
 Configure CDSink by editing the config.json file to point to your data model, and to exclude any attributes or relationships that
 you do not want to sync.
+If you need sql tables in addition to your model, put them in sql/application.sql
 Proccess your data model: ./xcd_model_parser.pl config.json
 This will generate a SQL schema, you will probably want to edit it, by default all core-data text fields are mapped as varchar(100).
-Create your mysql database, create the tables in the generated sql schema, and the system_schema.sql files.
+It will also connect to your SQL server and create tables.
 Start CDSink: ./script/cdsink daemon
 
 Refer to Mojolicious documentation for information about deploying mojolicious.

@@ -29,11 +29,12 @@ sub log_for_user{
     
     my $userid = $self->session('userid');    
     my $date = $self->param("date");
-    
-    my $deletes = $self->object_manager->deletes_for_user($userid, $date);
+
     my $changes = $self->object_manager->changes_for_user($userid, $date);
+    my $inserts = $self->object_manager->inserts_for_user($userid, $date);
+    my $deletes = $self->object_manager->deletes_for_user($userid, $date);
     
-    $self->render(json => {deletes => $deletes, changes => $changes }, status=>200);
+    $self->render(json => {changes => $changes, inserts => $inserts, deletes => $deletes }, status=>200);
 }
 
 1;

@@ -22,6 +22,9 @@
         ],
         "Location" : [
             "distanceFromCurrentLocation"
+        ],
+        "UserInfo" : [
+            "userid"
         ]
     },
     "primary_keys":{
@@ -33,10 +36,10 @@
                       "Observation"
                       ],
     "parent_object" : [
-                       "Observation"
+                       "Observation",
+                       "UserInfo"
                        ],
     "data_model" : "/Users/jesse/projects/pitPod/PitPod/PitPod.xcdatamodeld/PitPod 10.xcdatamodel/contents",
-    "sql_schema_file" : "model.sql",
     "json_model_file" : "model.json",
     "database":{
         "server" : "localhost",

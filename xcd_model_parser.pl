@@ -6,6 +6,7 @@ use Data::Dumper;
 use Scalar::Util 'reftype';
 use JSON;
 use Carp;
+use DBI;
 
 my %excluded_attributes;
 my %excluded_relationships;
@@ -147,7 +148,7 @@ sub is_attribute_excluded($$){
 sub read_config($){
     my $filepath = shift @_;
     if(!$filepath){
-        croak("No config file");
+        $filepath = "config.json";
     }
         
     my $json;
@@ -240,21 +241,22 @@ sub parse_model{
         
         $model{$entityName} = \%destination_entity;
         
-        my %relationships = %{$source_entity{'relationship'}};
-        foreach my $relationship_name (sort(keys(%relationships))){
-            if(!ref($relationships{$relationship_name})){
-                proccess_relationship(\%relationships, $entityName, $relationships{"name"});
-                last;
-            }else{
-                proccess_relationship($relationships{$relationship_name}, $entityName, $relationship_name);
+        if($source_entity{'relationship'}){
+            my %relationships = %{$source_entity{'relationship'}};
+            foreach my $relationship_name (sort(keys(%relationships))){
+                if(!ref($relationships{$relationship_name})){
+                    proccess_relationship(\%relationships, $entityName, $relationships{"name"});
+                    last;
+                }else{
+                    proccess_relationship($relationships{$relationship_name}, $entityName, $relationship_name);
+                }
             }
         }
     }
 }
 
 sub generate_sql{
-    #print Dumper %model;
-    my $outfile = $config{"sql_schema_file"};
+    my $outfile = "sql/model.sql";
     if(!$outfile){
         croak "Couldn't find sql_schema_file in config";
     }
@@ -264,14 +266,13 @@ sub generate_sql{
         my %attributes = %{$entity{"attributes"}};
         my @attribute_keys = sort(keys(%attributes));
         
-        my %relationships = %{$entity{"relationships"}};
-
         my $id_field = $config{"primary_keys"}->{$entity_name};
         if(!$id_field){
             $id_field = $entity_name . "_id";
         }
         $model{$entity_name}->{"primary_key"} = $id_field;
         
+        print schemaSQL "DROP TABLE $entity_name;\n";
         print schemaSQL "CREATE TABLE $entity_name (\n";
         print schemaSQL "\t$id_field INT AUTO_INCREMENT PRIMARY KEY,\n";
         
@@ -279,11 +280,15 @@ sub generate_sql{
             print schemaSQL "\tuserid INT,\n";
         }
 
-        my @relationship_keys;
         
-        foreach my $r(sort(keys(%relationships))){
-            if($relationships{$r}->{"sql_field"}){
-                push @relationship_keys, $r;
+        my @relationship_keys;
+        my %relationships;
+        if($entity{"relationships"}){
+            %relationships = %{$entity{"relationships"}};
+            foreach my $r(sort(keys(%relationships))){
+                if($relationships{$r}->{"sql_field"}){
+                    push @relationship_keys, $r;
+                }
             }
         }
         
@@ -306,21 +311,21 @@ sub generate_sql{
             print schemaSQL $sql_line;
         }
         
-        for(my $i = 0; $i <= $#relationship_keys; $i++){
-            my $relationship_name = $relationship_keys[$i];
-            my %relationship = %{$relationships{$relationship_name}};
-            
-            if(! $relationship{"sql_field"}){
-                next;
+        if($entity{"relationships"}){
+            while(my $relationship_name = shift @relationship_keys){
+                my %relationship = %{$relationships{$relationship_name}};
+                if(! $relationship{"sql_field"}){
+                    next;
+                }
+                
+                my $sql_line = "\t" . $relationship{"sql_field"} . " INT";
+                
+                if($#relationship_keys >= 0){
+                    $sql_line .= ",";
+                }
+                $sql_line .= "\n";
+                print schemaSQL $sql_line;
             }
-            
-            my $sql_line = "\t" . $relationship{"sql_field"} . " INT";
-            
-            if($i < $#relationship_keys ){
-                $sql_line .= ",";
-            }
-            $sql_line .= "\n";
-            print schemaSQL $sql_line;
         }
         
         print schemaSQL ");\n\n";
@@ -348,8 +353,40 @@ sub generate_json_model{
     close JSON_OUT;    
 }
 
+sub generate_tables{
+    my $db = $config{"database"}->{"database"};
+    my $dbserver = $config{"database"}->{"server"};
+    my $dbuser = $config{"database"}->{"user"};
+    my $dbpassword = $config{"database"}->{"password"};
+    
+    my $dbh = DBI->connect("DBI:mysql:$db:$dbserver", $dbuser, $dbpassword);
+    if(!$dbh){
+        croak("Failed to connect to database\nNot creating tables\n");
+    }
+    my @files = qw(system.sql model.sql application.sql);
+    foreach my $file(@files){
+        my $sql;
+        {
+            local $/=undef;
+            open FILE, "sql/$file" or die "Couldn't open file sql/$file: $!";
+            $sql = <FILE>;
+            close FILE;
+        }
+        print $sql;
+        my @tables = split(/\;/, $sql);
+        foreach my $table(@tables){
+            if($table =~ /^\s*drop/ || $table =~ /^\s*DROP/){
+                eval { $dbh->do($table) };
+            }elsif($table =~ /\w+/){
+                $dbh->do($table) || croak "Could not Create Table: $DBI::errstr";
+            }
+        }
+    }
+}
+
 read_config(shift @ARGV);
 parse_model();
 generate_sql();
 #print_methods();
 generate_json_model();
+generate_tables();

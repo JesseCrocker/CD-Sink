@@ -9,7 +9,7 @@ sub new { bless {}, shift }
 sub check_login($$){
     #return userid if succsesful, 0, if password is incorrect, -1 if email addr is incorrect
     my ($self, $username, $password) = @_;
-    my $sth = $self->{dbh}->prepare("select userid from users where email like ?");
+    my $sth = $self->{dbh}->prepare("select userid from users where username like ?");
     $sth->execute($username);
     my ($userid) = $sth->fetchrow_array;
     if(!$userid){
@@ -42,6 +42,7 @@ sub password_matches($){
     cost => 8,
     salt_base64 => $salt,
     hash_base64 => $hash);
+    
     if($ppr->match($password)){
         return 1;
     }
@@ -50,7 +51,7 @@ sub password_matches($){
 
 sub new_user($$){
     my ($self, $email, $password) = @_;
-    my $sth = $self->{dbh}->prepare("select userid from users where email like ?");
+    my $sth = $self->{dbh}->prepare("select userid from users where username like ?");
     $sth->execute($email);
     my ($result) = $sth->fetchrow_array;
     if($result){
@@ -59,10 +60,9 @@ sub new_user($$){
     
     my $hashed_password = $self->hash_new_password($password);
         
-    $sth = $self->{dbh}->prepare("insert into users (email, password, salt) values(?, ?, ?)");
+    $sth = $self->{dbh}->prepare("insert into users (username, password, salt) values(?, ?, ?)");
     if($sth->execute($email, $hashed_password->hash_base64, $hashed_password->salt_base64)){
         my $id = $self->{dbh}->{'mysql_insertid'};
-        #$self->user_message($id, "Welcome To Avalanche Lab.");
         return $id;
     }
     return 0;
@@ -132,18 +132,5 @@ sub delete_user($){
     $sth = $self->{dbh}->prepare("DELETE from users where userid like ?");
     $sth->execute($userid);
 }
-
-sub user_info($$){
-    my ($self, $userid, $me) = @_;
-    my $sth;
-    if($me){
-        $sth = $self->{dbh}->prepare('select userid, email, display_name, image_url, orginization, profile, push_messages, rating from users where userid like ?');
-    }else{
-        $sth = $self->{dbh}->prepare("select userid, email, display_name, image_url, orginization, profile, rating from users where userid like ?");
-    }
-    $sth->execute($userid);
-    return $sth->fetchrow_hashref;
-}
-
 
 1;

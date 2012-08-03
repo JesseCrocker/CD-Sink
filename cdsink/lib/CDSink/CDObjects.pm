@@ -193,7 +193,7 @@ sub post_object($$){
         $sth->execute(@relationship_ids);
     }
     
-    $self->update_modification_table($entity, $insert_id, $userid);
+    $self->update_insert_table($entity, $insert_id, $userid);
     
     return $insert_id;
 }
@@ -301,12 +301,21 @@ sub nullify_relationship_target($$){
 
 sub add_to_deletion_table($$$){
     my ($self, $entity, $object_id, $userid) = @_;
-    my $sth = $self->{dbh}->prepare("INSERT INTO deletions (entity, object_id, userid) values(?, ?, ?)");
+    my $sth = $self->{dbh}->prepare("INSERT INTO deletes (entity, object_id, userid) values(?, ?, ?)");
     $sth->execute($entity, $object_id, $userid);
 
     #clear out all modification logs on deleted objects
     $sth = $self->{dbh}->prepare("DELETE FROM modifications WHERE entity=? AND object_id=?");
     $sth->execute($entity, $object_id);
+    $sth = $self->{dbh}->prepare("DELETE FROM inserts WHERE entity=? AND object_id=?");
+    $sth->execute($entity, $object_id);
+}
+
+sub update_insert_table($$$){
+    my ($self, $entity, $object_id, $userid) = @_;
+    
+    $sth = $self->{dbh}->prepare("INSERT INTO inserts (entity, object_id, userid) values(?, ?, ?)");
+    $sth->execute($entity, $object_id, $userid);
 }
 
 sub update_modification_table($$$){
@@ -318,6 +327,28 @@ sub update_modification_table($$$){
     
     $sth = $self->{dbh}->prepare("INSERT INTO modifications (entity, object_id, userid) values(?, ?, ?)");
     $sth->execute($entity, $object_id, $userid);
+}
+
+sub inserts_for_user($$){
+    my ($self, $userid, $date) = @_;
+    
+    my $sql = "SELECT entity, object_id, date FROM inserts WHERE userid=?";
+    my $sth;
+    if($date){
+        $sql .= " and date > ?";
+        $sth = $self->{dbh}->prepare($sql);
+        $sth->execute($userid, $date);
+    }else{
+        $sth = $self->{dbh}->prepare($sql);
+        $sth->execute($userid);
+    }
+    
+    my @changes;
+    while(my $row = $sth->fetchrow_hashref){
+        push @changes, $row;
+    }
+    
+    return \@changes;
 }
 
 sub changes_for_user($$){
@@ -345,7 +376,7 @@ sub changes_for_user($$){
 sub deletes_for_user($$){
     my ($self, $userid, $date) = @_;
     
-    my $sql = "SELECT entity, object_id, date FROM deletions WHERE userid=?";
+    my $sql = "SELECT entity, object_id, date FROM deletes WHERE userid=?";
     my $sth;
     if($date){
         $sql .= " and date > ?";
