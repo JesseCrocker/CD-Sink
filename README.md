@@ -44,3 +44,8 @@ routes for sync:
 /deletes
 /changes - inserts and updates
 /log - changes and deletes
+
+customizing for your application:
+sql/application.sql for custom tables
+
+Two class of custom modules can be loaded, controllers and helpers.

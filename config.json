@@ -53,5 +53,7 @@
         "local_path": "/Users/jesse/projects/CD-Sink/cdsink/public",
         "url_prefix": "http://192.168.1.129:3000/"
     },
-    "secret":"mojo secret"
+    "secret":"mojo secret",
+    "controllers" : "AvyLab::Controllers",
+    "helpers" : "AvyLab::Helpers"
 }

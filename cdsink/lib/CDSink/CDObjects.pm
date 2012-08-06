@@ -4,20 +4,30 @@ use Data::Dumper;
 
 sub new { bless {}, shift }
 
+sub model{
+    my $self = shift;
+    return $self->{model};
+}
+
+sub dbh{
+    my $self = shift;
+    return $self->{dbh};
+}
+
 sub inverse_for_relationship($){
     my ($self, $relationship) = @_;
-    return $self->{"CDconfig"}->{"entities"}->{ $relationship->{"type"} }->{"relationships"}->{$relationship->{"inverse_name"}};
+    return $self->model->{ $relationship->{"type"} }->{"relationships"}->{$relationship->{"inverse_name"}};
 }
 
 sub primaryKeyForEntity($){
     my ($self, $entity) = @_;
-    my $key = $self->{"CDconfig"}->{"entities"}->{$entity}->{"primary_key"};
+    my $key = $self->model->{$entity}->{"primary_key"};
     return $key;
 }
 
 sub is_entity_valid($){
     my ($self, $entity) = @_;
-    if($self->{"CDconfig"}->{"entities"}->{$entity}){
+    if($self->model->{$entity}){
         return 1;
     }
     return 0;
@@ -25,7 +35,7 @@ sub is_entity_valid($){
 
 sub is_attribute_valid($$){
     my ($self, $entity, $attribute) = @_;
-    if($self->{"CDconfig"}->{"entities"}->{$entity}->{"attributes"}->{$attribute} ){
+    if($self->model->{$entity}->{"attributes"}->{$attribute} ){
         return 1;
     }
     return 0;
@@ -36,15 +46,17 @@ sub object_exists($$){
     #0 means doesnt exist
     #-1 bad id
     my ($self, $entity, $object_id) = @_;
-    return -1 unless $observation_id;
+    return -1 unless $object_id;
     my $id_field = $self->primaryKeyForEntity($entity);
     my $sth = $self->dbh->prepare("select $id_field from $entity where $id_field like ?");
-    if($sth->exectute($object_id)){
+    if($sth->execute($object_id)){
         my ($id) = $sth->fetchrow_array;
-        return 1 if $id;
+        return 0 unless $id;
+        return $id;
     }
     return 0;
 }
+
 
 sub get_object($$$){
     #return a hashref
@@ -53,7 +65,7 @@ sub get_object($$$){
     my $id_field = $self->primaryKeyForEntity($entity);
 
     #print "get_object of type $entity with $id_field=$object_id\n";
-    my %entity_config = %{$self->{"CDconfig"}->{"entities"}->{$entity}};
+    my %entity_config = %{$self->model->{$entity}};
     if(!%entity_config){
         $self->log->error("could not find config for entity $entity");
         return -1;
@@ -129,7 +141,7 @@ sub post_object($$){
     my ($self, $entity, $data, $userid) = @_;
     my %object = %{$data};
     #    print "post_object of type $entity\n";
-    my %entity_config = %{$self->{"CDconfig"}->{"entities"}->{$entity}};
+    my %entity_config = %{$self->model->{$entity}};
     if(!%entity_config){
         $self->log->error("could not find config for entity $entity");
         return -1;
@@ -218,7 +230,7 @@ sub update_object($$$$){
     my ($self, $entity, $object_id, $data, $userid) = @_;
     my %object = %{$data};
     
-    my %entity_config = %{$self->{"CDconfig"}->{"entities"}->{$entity}};
+    my %entity_config = %{$self->model->{$entity}};
     if(!%entity_config){
         $self->log->error("could not find config for entity $entity");
         return -1;
@@ -251,8 +263,8 @@ sub update_object($$$$){
     }
     
     my $field_placeholders = join ", ", map {"$_=?"} @sql_fields;
-    my $sql = "UPDATE $entity SET $field_placeholders WHERE $id_field=?";
-    my $sth = $self->{dbh}->prepare($sql);
+    $sql = "UPDATE $entity SET $field_placeholders WHERE $id_field=?";
+    $sth = $self->{dbh}->prepare($sql);
     $sth->execute(@insert_values, $object_id);
     
     my @relationship_fields;
@@ -341,7 +353,7 @@ sub delete_object($$$){
     my $id_field = $self->primaryKeyForEntity($entity);
     
     #print "delete_object of type $entity with $id_field=$object_id\n";
-    my %entity_config = %{$self->{"CDconfig"}->{"entities"}->{$entity}};
+    my %entity_config = %{$self->model->{$entity}};
     if(!%entity_config){
         $self->log->error("could not find config for entity $entity");
         return -1;

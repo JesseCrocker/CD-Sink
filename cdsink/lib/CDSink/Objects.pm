@@ -57,7 +57,12 @@ sub get_object{
     
     if($self->users->check_authorized($userid, "GET", $entity, $object_id)){
         my $object = $self->object_manager->get_object($entity, $object_id);
-        $self->render(json=>$object, status=>200);
+        my $format = $self->stash("format");
+        if(!$format || $format eq "json"){
+            $self->render(json => {$entity => $object }, status=>200);
+        }else{
+            $self->render($entity, object=>$object)
+        }
     }else{
         $self->render(json=>{error => "Not authorized to GET $entity/$object_id"}, status=>403);
     }

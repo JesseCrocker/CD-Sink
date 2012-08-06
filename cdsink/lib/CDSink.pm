@@ -6,22 +6,22 @@ use CDSink::CDUser;
 use CDSink::CDMessages;
 use CDSink::CDObjects;
 use Data::Dumper;
+use Mojo::Loader;
 
 # This method will run once at server start
 sub startup {
     my $self = shift;
     
-    my $config = $self->load_config;
-    $self->helper(CDconfig => sub { return $config });
-    #$self->log->debug("config: " . Dumper($config));
-    $self->secret($config->{"secret"});
+    
+    $self->load_config;
+    $self->secret($self->config->{"secret"});
     
     my $dbh = $self->setup_database;
     $self->helper(dbh => sub { return $dbh });
     
     my $users = CDSink::CDUser->new;
     $users->{dbh} = $dbh;
-    $users->{"CDconfig"} = $config;
+    $users->{model} = $self->model;
     $self->helper(users => sub { return $users });
 
     my $messages = CDSink::CDMessages->new;
@@ -29,8 +29,9 @@ sub startup {
     $self->helper(messages => sub { return $messages });
 
     my $object_manager = CDSink::CDObjects->new;
-    $object_manager->{"CDconfig"} = $config;
-    $object_manager->{"dbh"} = $dbh;
+    #$object_manager->{"CDconfig"} = $config;
+    $object_manager->{dbh} = $dbh;
+    $object_manager->{model} = $self->model;
     $self->helper(object_manager => sub { return $object_manager });
 
     $self->setup_basic_routes;
@@ -38,33 +39,34 @@ sub startup {
     $self->setup_object_routes;
     $self->setup_sync_routes;
     $self->setup_image_routes;
-    #$self->setup_message_routes;
-    #$self->setup_rating_routes;
+    $self->load_app_helpers;
+    $self->load_app_controllers;
 }
 
 sub load_config{
     my $self = shift;
-    my $filepath = "../model.json";
-    if(!$filepath){
-        croak("No config file");
-    }
+    my $filepath = "../config.json";
     
+    my $config = $self->plugin('JSONConfig' => {file => $filepath});
+    
+    my $modelFile = "../model.json";
     my $json;
     {
         local $/=undef;
-        open FILE, $filepath or die "Couldn't open file $filepath: $!";
+        open FILE, $modelFile or die "Couldn't open file $modelFile: $!";
         $json = <FILE>;
         close FILE;
     }
-    return decode_json $json;
+    my $model = decode_json $json;
+    $self->helper(model => sub { return $model });
 }
 
 sub setup_database{
     my $self = shift;
-    my $db = $self->CDconfig->{"database"}->{"database"};
-    my $dbserver = $self->CDconfig->{"database"}->{"server"};
-    my $dbuser = $self->CDconfig->{"database"}->{"user"};
-    my $dbpassword = $self->CDconfig->{"database"}->{"password"};
+    my $db = $self->config->{"database"}->{"database"};
+    my $dbserver = $self->config->{"database"}->{"server"};
+    my $dbuser = $self->config->{"database"}->{"user"};
+    my $dbpassword = $self->config->{"database"}->{"password"};
     
     $self->log->debug("Connect to database: $dbuser@" . "$dbserver:$db with password $dbpassword");
     my $dbh = DBI->connect("DBI:mysql:$db:$dbserver", $dbuser, $dbpassword);
@@ -72,7 +74,49 @@ sub setup_database{
         $self->log->error("Failed to connect to database");
         exit;
     }
+    #$dbh->{TraceLevel} = "2|SQL";
     return $dbh;
+}
+
+sub load_app_helpers{
+    my $self = shift;
+    
+    $self->log->debug("Loading app helpers from class " . $self->config->{helpers});
+    
+    my $loader = Mojo::Loader->new;
+    for my $class (@{$loader->search($self->config->{helpers})}) {
+        $self->log->debug("loading class $class");
+        
+        my $exception = $loader->load($class);
+        if($exception){
+            $self->log->error($exception);
+        }
+        
+        my $h = $class->new;
+        $h->setup($self->app);
+    }
+}
+
+sub load_app_controllers{
+    my $self = shift;
+    
+    $self->log->debug("Loading app controllers from class " . $self->config->{controllers});
+    
+    my $loader = Mojo::Loader->new;
+    for my $class (@{$loader->search($self->config->{controllers})}) {
+        $self->log->debug("loading class $class");
+
+        my $exception = $loader->load($class);
+        if($exception){
+            $self->log->error($exception);
+        }
+        
+        $self->app->routes->add_child($_) for @{$class->new->routes->children};
+        
+        # Make DATA sections accessible
+        push @{$self->app->static->classes},   $class;
+        push @{$self->app->renderer->classes}, $class;
+    }
 }
 
 #setup routes
@@ -90,7 +134,7 @@ sub setup_object_routes{
     
     $self->log->debug("setup_object_routes");
     my $r = $self->routes;
-    my %entities = %{$self->CDconfig->{entities}};
+    my %entities = %{$self->model};
     
     foreach my $entity_name(keys(%entities)){
         my %entity = %{$entities{$entity_name}};
@@ -133,14 +177,6 @@ sub setup_image_routes{
     my $self = shift;
     my $r = $self->routes;
     $r->post("/imageUpload")->to(controller=>"Images", action=>"image_upload");
-}
-
-sub setup_message_routes{
-    
-}
-
-sub setup_rating_routes{
-    
 }
 
 1;

@@ -82,7 +82,7 @@ sub check_authorized($$$$){
     #is the user allowed to modify this observation/comment/whattever
     #return 1 if allowed, 0 if not allowed, -1 if object does not exist
     my ($self, $userid, $method, $entity_name, $object_id) = @_;
-    my %entity = %{$self->{"CDconfig"}->{"entities"}->{$entity_name}};
+    my %entity = %{$self->{model}->{$entity_name}};
     my $id_field = $entity{"primary_key"};
     
     if($method eq "POST"){

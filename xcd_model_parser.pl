@@ -349,8 +349,7 @@ sub generate_json_model{
         croak "Couldn't find json_model_file in config";
     }
     open JSON_OUT, ">$outfile" || croak "$!";
-    my $model_json = JSON->new->pretty->encode({"entities" => \%model, database => $config{"database"},
-        secret => $config{"secret"}, images => $config{"images"} });
+    my $model_json = JSON->new->pretty->encode( \%model );
     print JSON_OUT $model_json;
     close JSON_OUT;    
 }
