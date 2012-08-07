@@ -84,46 +84,50 @@ sub check_authorized($$$$){
     my ($self, $userid, $method, $entity_name, $object_id) = @_;
     my %entity = %{$self->{model}->{$entity_name}};
     my $id_field = $entity{"primary_key"};
-    
+
     if($method eq "POST"){
+        #all users alowed to post
         if($userid){
             return 1;
         }else{
             return 0;
         }
-    }elsif($method eq "PUT" || $method eq "DELETE"){
+    }
+    #not posting, get/modify existing object
+    my $object_owner_id = $self->{app}->object_manager->object_exists($entity_name, $object_id);
+    if($object_owner_id <= 0){
+        return -1;
+    }
+    
+    if($method eq "PUT" || $method eq "DELETE"){
         #object can only be updated or deleted by its owner
-        my $sth = $self->{dbh}->prepare("select userid from $entity_name where $id_field like ?");
-        $sth->execute($object_id);
-        my ($object_userid) = $sth->fetchrow_array;
-        if($object_userid && $userid == $object_userid){
+        if($userid == $object_owner_id){
             return 1;
         }
         return 0;
     }elsif($method eq "GET"){
+        if ( grep { $_ eq $entity_name} @{ $self->{app}->config->{"public"} }){
+            return 1;
+        }
+        
         if($entity{"attributes"}->{"private"}){
             #does it have a private field
-            my $sth = $self->{dbh}->prepare("select private,userid from $entity_name where $id_field like ?");
+            my $sth = $self->{dbh}->prepare("select private from $entity_name where $id_field like ?");
             $sth->execute($object_id);
-            my ($private, $object_userid) = $sth->fetchrow_array;
+            my ($private) = $sth->fetchrow_array;
             if($private){
-                if($userid == $object_userid){
-                    return 1;
-                }
                 return 0;
-            }
-            #not private
-            return 1;            
-        }else{
-            #if no private field, then assume private
-            my $sth = $self->{dbh}->prepare("select userid from $entity_name where $id_field like ?");
-            $sth->execute($object_id);
-            my ($object_userid) = $sth->fetchrow_array;
-            if($userid == $object_userid){
+            }else{ #not private
                 return 1;
             }
-            return 0;
         }
+        
+        if($userid && $userid == $object_owner_id){
+            return 1;
+        }
+
+        
+        return 0;
     }else{
         $self->log->error("unknow method in check_authorized: $method");
     }

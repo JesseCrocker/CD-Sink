@@ -30,9 +30,13 @@
     },
     "primary_keys":{
         "Observation" : "observation_id",
+        "Location" : "location_id",
         "UserInfo" : "userid"
     },
     "excluded_relationships" : {},
+    "public":[
+        "UserInfo"
+    ],
     "has_children" : [
                       "AvalancheOccurence",
                       "Observation"

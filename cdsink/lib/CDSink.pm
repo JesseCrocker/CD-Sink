@@ -22,6 +22,7 @@ sub startup {
     my $users = CDSink::CDUser->new;
     $users->{dbh} = $dbh;
     $users->{model} = $self->model;
+    $users->{app} = $self->app;
     $self->helper(users => sub { return $users });
 
     my $messages = CDSink::CDMessages->new;
@@ -29,7 +30,6 @@ sub startup {
     $self->helper(messages => sub { return $messages });
 
     my $object_manager = CDSink::CDObjects->new;
-    #$object_manager->{"CDconfig"} = $config;
     $object_manager->{dbh} = $dbh;
     $object_manager->{model} = $self->model;
     $self->helper(object_manager => sub { return $object_manager });
@@ -74,7 +74,7 @@ sub setup_database{
         $self->log->error("Failed to connect to database");
         exit;
     }
-    #$dbh->{TraceLevel} = "2|SQL";
+    #    $dbh->{TraceLevel} = "2|SQL";
     return $dbh;
 }
 

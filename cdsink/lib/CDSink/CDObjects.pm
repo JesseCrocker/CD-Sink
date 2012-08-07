@@ -57,6 +57,10 @@ sub object_exists($$){
     return 0;
 }
 
+sub get_objects($$$){
+    my ($self, $entity, $ids, $ignore_relationship) = @_;
+    my @results = map {$self->get_object($entity, $_, $ignore_relationship)} @{$ids};
+}
 
 sub get_object($$$){
     #return a hashref

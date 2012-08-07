@@ -47,12 +47,13 @@ sub get_object{
     my $userid = $self->session('userid');
     my $entity = $self->param('entity');
     my $object_id = $self->param('object_id');
-    if(!$userid){
-        $self->render(json=>{error => "Not logged in"}, status=>403);
-    }
-    
+ 
     if(!$object_id){
-        $self->render(json=>{error => "No object specified"}, status=>400);
+       return $self->render(json=>{error => "No object specified"}, status=>400);
+    }
+ 
+    unless($self->object_manager->object_exists($entity, $object_id)){
+        return $self->render(json=>{error => "Object Not Found"}, status=>404);
     }
     
     if($self->users->check_authorized($userid, "GET", $entity, $object_id)){
