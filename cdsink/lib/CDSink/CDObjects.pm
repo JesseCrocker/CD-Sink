@@ -131,8 +131,9 @@ sub get_object($$$){
         }else{#to one
             if($object{$sql_field}){
                 my $id = $object{$sql_field};
-                delete $object{$sql_field};
+                #delete $object{$sql_field};
                 $object{$r_name} = $self->get_object( $r{"type"}, $id, $inverse{"name"} );
+                
             }
         }
     }

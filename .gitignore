@@ -6,3 +6,4 @@ application.sql
 *.log
 *~
 *.png
+cdsink/lib/AvyLab/

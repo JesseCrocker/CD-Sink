@@ -8,7 +8,8 @@
             "source",
             "owned",
             "synced",
-            "needsLoading"
+            "needsLoading",
+            "location_ID"
         ],
         "Media" : [
             "imageData",

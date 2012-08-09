@@ -7,7 +7,7 @@ This is ALPHA software that is being actively developed.
 
 It is not designed with an eye to speed, you might not want to use it for production, but it is great for rapid prototyping.
 
-### Why use CD-Sink instead of iClound core-data?
+### Why use CD-Sink instead of iCloud core-data?
 If you have to ask that, then there is a good chance you will be just fine using iCloud.
 But if you need to do any of the following then CD-Sink might be a good choice:
 

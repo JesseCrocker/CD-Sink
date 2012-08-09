@@ -41,9 +41,9 @@ sub image_upload{
         }elsif($type eq "image/jpeg"){
             $filename .= ".jpg";
         }
-        my $imagedir = $self->CDconfig->{"images"}->{"local_path"};
+        my $imagedir = $self->config->{"images"}->{"local_path"};
         $image->move_to($imagedir . "/" . $filename);
-        my $url =  $self->CDconfig->{"images"}->{"url_prefix"};
+        my $url =  $self->config->{"images"}->{"url_prefix"};
         if($url !~ /\/$/){
             $url .= "/";
         }

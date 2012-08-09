@@ -74,7 +74,7 @@ sub setup_database{
         $self->log->error("Failed to connect to database");
         exit;
     }
-    #    $dbh->{TraceLevel} = "2|SQL";
+    #$dbh->{TraceLevel} = "2|SQL";
     return $dbh;
 }
 
