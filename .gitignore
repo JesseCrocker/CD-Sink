@@ -7,3 +7,4 @@ application.sql
 *~
 *.png
 cdsink/lib/AvyLab/
+config.json

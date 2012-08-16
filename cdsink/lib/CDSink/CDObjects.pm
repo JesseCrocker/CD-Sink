@@ -93,6 +93,14 @@ sub get_object($$$){
     $sth->execute($object_id);
     
     my %object = %{$sth->fetchrow_hashref};
+
+    foreach my $field(@input_fields){
+	if($attributes{$field}->{"original_name"}){
+	    my $value = $object{$attributes{$field}->{"sql_field"}};
+	    delete $object{$attributes{$field}->{"sql_field"}};
+	    $object{$attributes{$field}->{"original_name"}} = $value;
+	}
+    }
         
     my %relationships = %{$entity_config{'relationships'}};
     foreach my $r_name(keys(%relationships)){

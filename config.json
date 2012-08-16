@@ -1,4 +1,7 @@
 {
+	"hypnotoad":{
+		"listen": ["http://*:10001"]
+	},
     "exclude_entities" : [
                           "Terrain"
                           ],
@@ -9,7 +12,7 @@
             "owned",
             "synced",
             "needsLoading",
-            "location_ID"
+	    "location_ID"
         ],
         "Media" : [
             "imageData",
@@ -22,7 +25,8 @@
             "myQuality"
         ],
         "Location" : [
-            "distanceFromCurrentLocation"
+            "distanceFromCurrentLocation",
+	    "location_id"
         ],
         "UserInfo" : [
             "userid",
@@ -31,34 +35,31 @@
     },
     "primary_keys":{
         "Observation" : "observation_id",
-        "Location" : "location_id",
         "UserInfo" : "userid"
     },
     "excluded_relationships" : {},
-    "public":[
-        "UserInfo"
-    ],
     "has_children" : [
                       "AvalancheOccurence",
                       "Observation"
                       ],
     "parent_object" : [
                        "Observation",
-                       "UserInfo"
+                       "UserInfo",
+		       "Location"
                        ],
-    "data_model" : "/Users/jesse/projects/pitPod/PitPod/PitPod.xcdatamodeld/PitPod 10.xcdatamodel/contents",
+    "data_model" : "/home/avylabweb/model.xml",
     "json_model_file" : "model.json",
     "database":{
-        "server" : "localhost",
-        "database" : "AvyLab",
-        "user" : "jesse",
-        "password" : "VoySwypIOw7quoicOfDi"
+        "server" : "mysql.avalanchelab.com",
+        "database" : "avylab",
+        "user" : "avylab",
+        "password" : "aydyejDikcethBie"
     },
     "images":{
-        "local_path": "/Users/jesse/projects/CD-Sink/cdsink/public",
-        "url_prefix": "http://192.168.1.129:3000/"
+        "local_path": "/home/avylabweb/uploaded-images",
+        "url_prefix": "https://avalanchelab.com/api/images/"
     },
-    "secret":"mojo secret",
+    "secret":"sdalhfc.laksgjvq237r frengfrekgfj23nn7trf",
     "controllers" : "AvyLab::Controllers",
     "helpers" : "AvyLab::Helpers"
 }
