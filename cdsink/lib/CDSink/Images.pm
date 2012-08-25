@@ -1,6 +1,7 @@
 package CDSink::Images;
 use Mojo::Base 'Mojolicious::Controller';
 use Data::UUID;
+use Data::Dumper;
 
 sub image_upload{
     my $self = shift;
@@ -35,7 +36,6 @@ sub image_upload{
     
     elsif($self->users->check_authorized($userid, "PUT", $entity, $object_id)){
         my $filename = $self->generate_filename;
-        $filename =~ s/[^\w]/a/g;
         if($type eq "image/png"){
             $filename .= ".png";
         }elsif($type eq "image/jpeg"){
@@ -57,7 +57,9 @@ sub image_upload{
 
 sub generate_filename{
     my $ug = new Data::UUID;
-    return $ug->create_b64();
+    my $filename = $ug->create_b64();
+    $filename =~ s/[^\w]/a/g;
+    return $filename;
 }
 
 sub set_url($$$){
@@ -67,6 +69,28 @@ sub set_url($$$){
     my $sth = $self->dbh->prepare("UPDATE $entity SET $field=? where $id_field=?");
     $sth->execute($url, $object_id);
     $self->object_manager->update_modification_table($entity, $object_id, $self->session("userid"));
+}
+
+sub get_image{
+    my ($self) = @_;
+    my  $image = $self->param("image") . "." . $self->stash("format");
+    if(!$self->check_valid_name($image)){
+	return $self->render(json=>{error => "invlaid file name"}, status=>400);
+    }
+    unless(-e ($self->config->{"images"}->{"local_path"} . "/" . $image)){
+        return $self->render(text=>"", status=>404);
+    }
+    my $static = Mojolicious::Static->new(paths => [ $self->config->{"images"}->{"local_path"} ]);
+    $static->serve($self, $image);
+    $self->rendered;
+}
+
+sub check_valid_name($){
+    my ($self, $filename) = @_;
+    if($filename =~ /^[\w]+\.[\w]+$/){
+       return 1;
+    }
+    return 0;
 }
 
 1;

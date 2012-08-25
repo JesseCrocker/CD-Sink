@@ -12,7 +12,6 @@ use Mojo::Loader;
 sub startup {
     my $self = shift;
     
-    
     $self->load_config;
     $self->secret($self->config->{"secret"});
     
@@ -177,6 +176,7 @@ sub setup_image_routes{
     my $self = shift;
     my $r = $self->routes;
     $r->post("/imageUpload")->to(controller=>"Images", action=>"image_upload");
+    $r->get("/images/:image")->to(controller=>"Images", action=>"get_image");
 }
 
 1;
