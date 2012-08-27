@@ -54,7 +54,6 @@ Refer to Mojolicious documentation for information about deploying mojolicious.
 
 ## Perl modules needed:
 * Mojolicious
-* Mojolicious::Plugin::Database
 * DBI
 * DBD::mysql
 * Authen::Passphrase::BlowfishCrypt

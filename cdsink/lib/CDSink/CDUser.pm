@@ -97,7 +97,6 @@ sub check_authorized($$$$){
     #not posting, get/modify existing object
     my $object_owner_id = $self->{app}->object_manager->object_exists($entity_name, $object_id);
     if($object_owner_id <= 0){
-	#object does not exist
         return -1;
     }
     
@@ -108,7 +107,7 @@ sub check_authorized($$$$){
         }
         return 0;
     }elsif($method eq "GET"){
-        if ( grep { $_ eq $entity_name} @{ $self->{app}->config->{"public_entities"} }){
+        if ( grep { $_ eq $entity_name} @{ $self->{app}->config->{"public"} }){
             return 1;
         }
         

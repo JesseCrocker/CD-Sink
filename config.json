@@ -5,9 +5,6 @@
     "exclude_entities" : [
                           "Terrain"
                           ],
-     "public_entities" : [
-     		       "UserInfo"
-		       ],
     "excluded_attributes" : {
         "Observation" : [
             "locked",
