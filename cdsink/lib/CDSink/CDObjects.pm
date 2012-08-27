@@ -11,7 +11,7 @@ sub model{
 
 sub dbh{
     my $self = shift;
-    return $self->{dbh};
+    return $self->{app}->dbh;
 }
 
 sub inverse_for_relationship($){
@@ -48,7 +48,7 @@ sub object_exists($$){
     my ($self, $entity, $object_id) = @_;
     return -1 unless $object_id;
     my $id_field = $self->primaryKeyForEntity($entity);
-    my $sth = $self->dbh->prepare("select $id_field from $entity where $id_field like ?");
+    my $sth = $self->dbh->prepare("SELECT userid FROM $entity where $id_field=?");
     if($sth->execute($object_id)){
         my ($id) = $sth->fetchrow_array;
         return 0 unless $id;
@@ -87,9 +87,9 @@ sub get_object($$$){
         push(@sql_fields, "userid");
         push(@insert_values, $userid)
     }
-    
+    my $dbh = $self->dbh;
     my $sql = "SELECT * FROM $entity WHERE $id_field=?";
-    my $sth = $self->{dbh}->prepare($sql);
+    my $sth = $dbh->prepare($sql);
     $sth->execute($object_id);
     
     my %object = %{$sth->fetchrow_hashref};
@@ -127,7 +127,7 @@ sub get_object($$$){
             if($inverse_field){
                 my $sql = "SELECT $target_id_field FROM " . $r{"type"} . " WHERE $inverse_field=?";
                 # print "$sql\n";
-                my $sth = $self->{dbh}->prepare($sql);
+                my $sth = $dbh->prepare($sql);
                 $sth->execute($object_id);
                 my @ids_to_fetch = @{$sth->fetchall_arrayref([0])};
                 my @objects_for_relationship;
@@ -176,10 +176,10 @@ sub post_object($$){
     }
     
     my $field_placeholders = join ", ", map {'?'} @sql_fields;
-
-    my $sth = $self->{dbh}->prepare("insert into $entity(" . join(",", @sql_fields) . ") values($field_placeholders)");
+    my $dbh = $self->dbh;
+    my $sth = $dbh->prepare("insert into $entity(" . join(",", @sql_fields) . ") values($field_placeholders)");
     $sth->execute(@insert_values);
-    my $insert_id = $self->{dbh}->{'mysql_insertid'};
+    my $insert_id = $dbh->{'mysql_insertid'};
     if(!$insert_id){
         return -1;
     }
@@ -230,7 +230,7 @@ sub post_object($$){
     if(@relationship_fields){
         my $field_placeholders = join ", ", map {"$_=?"} @relationship_fields;
         my $sql = "update $entity SET $field_placeholders where " . $self->primaryKeyForEntity($entity) . "=$insert_id";
-        my $sth = $self->{dbh}->prepare($sql);
+        my $sth = $self->dbh->prepare($sql);
         $sth->execute(@relationship_ids);
     }
     
@@ -267,7 +267,8 @@ sub update_object($$$$){
     
     #fetch a copy of object to use for relationship proccessing
     my $sql = "SELECT * FROM $entity WHERE $id_field=?";
-    my $sth = $self->{dbh}->prepare($sql);
+    my $dbh = $self->dbh;
+    my $sth = $dbh->prepare($sql);
     $sth->execute($object_id);
     my %original_object = %{$sth->fetchrow_hashref};
     if(!%original_object){
@@ -277,7 +278,7 @@ sub update_object($$$$){
     
     my $field_placeholders = join ", ", map {"$_=?"} @sql_fields;
     $sql = "UPDATE $entity SET $field_placeholders WHERE $id_field=?";
-    $sth = $self->{dbh}->prepare($sql);
+    $sth = $dbh->prepare($sql);
     $sth->execute(@insert_values, $object_id);
     
     my @relationship_fields;
@@ -302,7 +303,7 @@ sub update_object($$$$){
             my $target_id_field = $self->primaryKeyForEntity( $r{"type"} );
             if($inverse_field){
                 my $sql = "SELECT $target_id_field FROM $r{'type'} WHERE $inverse_field=?";
-                my $sth = $self->{dbh}->prepare($sql);
+                my $sth = $dbh->prepare($sql);
                 $sth->execute($object_id);
                 my @ids_to_delete = @{$sth->fetchall_arrayref([0])};
                 foreach my $t(@ids_to_delete){
@@ -351,7 +352,7 @@ sub update_object($$$$){
     if(@relationship_fields){
         my $field_placeholders = join ", ", map {"$_=?"} @relationship_fields;
         my $sql = "update $entity SET $field_placeholders where " . $self->primaryKeyForEntity($entity) . "=$insert_id";
-        my $sth = $self->{dbh}->prepare($sql);
+        my $sth = $dbh->prepare($sql);
         $sth->execute(@relationship_ids);
     }
     
@@ -375,8 +376,9 @@ sub delete_object($$$){
     my %attributes = %{$entity_config{'attributes'}};
 
     #fetch a copy of object to use for relationship proccessing
+    my $dbh = $self->dbh;
     my $sql = "SELECT * FROM $entity WHERE $id_field=?";
-    my $sth = $self->{dbh}->prepare($sql);
+    my $sth = $dbh->prepare($sql);
     $sth->execute($object_id);
     my %object = %{$sth->fetchrow_hashref};
     if(!%object){
@@ -385,7 +387,7 @@ sub delete_object($$$){
     
     #delete from db
     $sql = "DELETE FROM $entity WHERE $id_field=?";
-    $sth = $self->{dbh}->prepare($sql);
+    $sth = $dbh->prepare($sql);
     $sth->execute($object_id);
     
     #make entry in deletions table
@@ -403,7 +405,7 @@ sub delete_object($$$){
             my $target_id_field = $self->primaryKeyForEntity( $r{"type"} );
             if($inverse_field){
                 my $sql = "SELECT $target_id_field FROM $r{'type'} WHERE $inverse_field=?";
-                my $sth = $self->{dbh}->prepare($sql);
+                my $sth = $dbh->prepare($sql);
                 $sth->execute($object_id);
                 my @ids_to_delete = @{$sth->fetchall_arrayref([0])};
                 foreach my $t(@ids_to_delete){
@@ -447,27 +449,28 @@ sub nullify_relationship_target($$){
 
     if($inverse{'sql_field'}){
         my $sql = "UPDATE $relationship->{'type'} SET $inverse{'sql_field'}=0 where $id_field=?";
-        my $sth = $self->{dbh}->prepare($sql);
+        my $sth = $dbh->prepare($sql);
         $sth->execute($target_id);
     }
 }
 
 sub add_to_deletion_table($$$){
     my ($self, $entity, $object_id, $userid) = @_;
-    my $sth = $self->{dbh}->prepare("INSERT INTO deletes (entity, object_id, userid) values(?, ?, ?)");
+    my $dbh = $self->dbh;
+    my $sth = $dbh->prepare("INSERT INTO deletes (entity, object_id, userid) values(?, ?, ?)");
     $sth->execute($entity, $object_id, $userid);
 
     #clear out all modification logs on deleted objects
-    $sth = $self->{dbh}->prepare("DELETE FROM modifications WHERE entity=? AND object_id=?");
+    $sth = $dbh->prepare("DELETE FROM modifications WHERE entity=? AND object_id=?");
     $sth->execute($entity, $object_id);
-    $sth = $self->{dbh}->prepare("DELETE FROM inserts WHERE entity=? AND object_id=?");
+    $sth = $dbh->prepare("DELETE FROM inserts WHERE entity=? AND object_id=?");
     $sth->execute($entity, $object_id);
 }
 
 sub update_insert_table($$$){
     my ($self, $entity, $object_id, $userid) = @_;
     
-    $sth = $self->{dbh}->prepare("INSERT INTO inserts (entity, object_id, userid) values(?, ?, ?)");
+    $sth = $self->dbh->prepare("INSERT INTO inserts (entity, object_id, userid) values(?, ?, ?)");
     $sth->execute($entity, $object_id, $userid);
 }
 
@@ -475,24 +478,25 @@ sub update_modification_table($$$){
     my ($self, $entity, $object_id, $userid) = @_;
     
     #clear out previous logs for this object
-    $sth = $self->{dbh}->prepare("DELETE FROM modifications WHERE entity=? AND object_id=?");
+    my $dbh = $self->dbh;
+    $sth = $dbh->prepare("DELETE FROM modifications WHERE entity=? AND object_id=?");
     $sth->execute($entity, $object_id);
     
-    $sth = $self->{dbh}->prepare("INSERT INTO modifications (entity, object_id, userid) values(?, ?, ?)");
+    $sth = $dbh->prepare("INSERT INTO modifications (entity, object_id, userid) values(?, ?, ?)");
     $sth->execute($entity, $object_id, $userid);
 }
 
 sub inserts_for_user($$){
     my ($self, $userid, $date) = @_;
-    
+
     my $sql = "SELECT entity, object_id, date FROM inserts WHERE userid=?";
     my $sth;
     if($date){
         $sql .= " and date > ?";
-        $sth = $self->{dbh}->prepare($sql);
+        $sth = $self->dbh->prepare($sql);
         $sth->execute($userid, $date);
     }else{
-        $sth = $self->{dbh}->prepare($sql);
+        $sth = $self->dbh->prepare($sql);
         $sth->execute($userid);
     }
     
@@ -511,10 +515,10 @@ sub changes_for_user($$){
     my $sth;
     if($date){
         $sql .= " and date > ?";
-        $sth = $self->{dbh}->prepare($sql);
+        $sth = $self->dbh->prepare($sql);
         $sth->execute($userid, $date);
     }else{
-        $sth = $self->{dbh}->prepare($sql);
+        $sth = $self->dbh->prepare($sql);
         $sth->execute($userid);
     }
     
@@ -533,10 +537,10 @@ sub deletes_for_user($$){
     my $sth;
     if($date){
         $sql .= " and date > ?";
-        $sth = $self->{dbh}->prepare($sql);
+        $sth = $self->dbh->prepare($sql);
         $sth->execute($userid, $date);
     }else{
-        $sth = $self->{dbh}->prepare($sql);
+        $sth = $self->dbh->prepare($sql);
         $sth->execute($userid);
     }
     
