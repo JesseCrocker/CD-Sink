@@ -90,7 +90,9 @@ sub update_object{
     if($self->users->check_authorized($userid, "PUT", $entity, $object_id)){
         my $object = Mojo::JSON->decode( $self->req->body);
         $self->object_manager->update_object($entity, $object_id, $object, $userid);
-        $self->render(json=>{$entity => "Object updated"}, status=>202);
+        #$self->render(json=>{$entity => "Object up}, status=>202);
+        my $id_field = $self->object_manager->primaryKeyForEntity($entity);
+        $self->render(json=>{$entity => {$id_field => $object_id}}, status=>202);
     }else{
         $self->render(json=>{error => "Not authorized to PUT $entity/$object_id"}, status=>403);
     }
@@ -114,7 +116,7 @@ sub delete_object{
         if($self->object_manager->delete_object($entity, $object_id, $userid)){
 	    my $id_field = $self->object_manager->primaryKeyForEntity($entity);
             $self->render(json=>{$entity => {$id_field => $object_id}}, status=>204);
-        }else{#delete found, object not found
+        }else{#delete unpossible, object not found
             $self->render(json=>{error => "Object not found"}, status=>404);
         }
 
