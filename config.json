@@ -35,8 +35,7 @@
     },
     "primary_keys":{
         "Observation" : "observation_id",
-        "UserInfo" : "userid",
-	"Media"	   : "media_id"
+        "UserInfo" : "userid"
     },
     "excluded_relationships" : {},
     "has_children" : [
@@ -46,8 +45,7 @@
     "parent_object" : [
                        "Observation",
                        "UserInfo",
-		       "Location",
-		       "Media"
+		       "Location"
                        ],
     "data_model" : "/home/avylabweb/model.xml",
     "json_model_file" : "model.json",
