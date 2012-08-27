@@ -7,7 +7,6 @@ use CDSink::CDMessages;
 use CDSink::CDObjects;
 use Data::Dumper;
 use Mojo::Loader;
-use Mojolicious::Plugin::Database;
 
 # This method will run once at server start
 sub startup {
@@ -16,20 +15,21 @@ sub startup {
     $self->load_config;
     $self->secret($self->config->{"secret"});
     
-#    $self->helper(dbh => sub { return $self->database_connection });
-    $self->setup_database_connection;
-
+    my $dbh = $self->setup_database;
+    $self->helper(dbh => sub { return $dbh });
+    
     my $users = CDSink::CDUser->new;
+    $users->{dbh} = $dbh;
     $users->{model} = $self->model;
     $users->{app} = $self->app;
     $self->helper(users => sub { return $users });
 
     my $messages = CDSink::CDMessages->new;
-    $messages->{app} = $self->app;
+    $messages->{dbh} = $dbh;
     $self->helper(messages => sub { return $messages });
 
     my $object_manager = CDSink::CDObjects->new;
-    $object_manager->{app} = $self->app;
+    $object_manager->{dbh} = $dbh;
     $object_manager->{model} = $self->model;
     $self->helper(object_manager => sub { return $object_manager });
 
@@ -60,26 +60,7 @@ sub load_config{
     $self->helper(model => sub { return $model });
 }
 
-sub setup_database_connection{
-    my $self = shift;
-    my $db = $self->config->{"database"}->{"database"};
-    my $dbserver = $self->config->{"database"}->{"server"};
-    my $dbuser = $self->config->{"database"}->{"user"};
-    my $dbpassword = $self->config->{"database"}->{"password"};
-
-    $self->log->debug("Setting up database connection: $dbuser@" . "$dbserver:$db with password $dbpassword");
-
-    $self->plugin('database', { 
-            dsn      => "DBI:mysql:$db:$dbserver",
-            username => $dbuser,
-            password => $dbpassword,
-            options  => {},
-            helper   => 'dbh',
-		  });
-}
-
-sub database_connection{
-#not used currently, using database plugin instead
+sub setup_database{
     my $self = shift;
     my $db = $self->config->{"database"}->{"database"};
     my $dbserver = $self->config->{"database"}->{"server"};
