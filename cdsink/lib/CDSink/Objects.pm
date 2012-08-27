@@ -28,7 +28,7 @@ sub post_object{
     }
     
     if($self->users->check_authorized($userid, "POST", $entity, "")){
-        $self->app->log->debug($self->req->body);
+        $self->app->log->debug("Request body:" . $self->req->body);
         my $object = Mojo::JSON->decode( $self->req->body);
         my $insert_id = $self->object_manager->post_object($entity, $object, $userid);
         if($insert_id > 0){
