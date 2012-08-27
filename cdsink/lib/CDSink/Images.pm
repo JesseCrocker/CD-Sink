@@ -40,7 +40,9 @@ sub image_upload{
             $filename .= ".png";
         }elsif($type eq "image/jpeg"){
             $filename .= ".jpg";
-        }
+        }elsif($type eq "video/mp4"){
+	    $filename .= ".mov";
+	}
         my $imagedir = $self->config->{"images"}->{"local_path"};
         $image->move_to($imagedir . "/" . $filename);
         my $url =  $self->config->{"images"}->{"url_prefix"};
