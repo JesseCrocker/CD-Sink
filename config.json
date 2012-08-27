@@ -56,15 +56,15 @@
     "json_model_file" : "model.json",
     "database":{
         "server" : "mysql.avalanchelab.com",
-        "database" : "avylab",
-        "user" : "avylab",
-        "password" : "aydyejDikcethBie"
+        "database" : "database",
+        "user" : "dbuser",
+        "password" : "database password"
     },
     "images":{
         "local_path": "/home/avylabweb/uploaded-images",
         "url_prefix": "https://avalanchelab.com/api/images/"
     },
-    "secret":"sdalhfc.laksgjvq237r frengfrekgfj23nn7trf",
+    "secret":"mojo secret",
     "controllers" : "AvyLab::Controllers",
     "helpers" : "AvyLab::Helpers"
 }

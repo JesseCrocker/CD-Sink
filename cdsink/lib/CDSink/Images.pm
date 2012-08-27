@@ -33,31 +33,47 @@ sub image_upload{
     elsif(!$self->object_manager->is_attribute_valid($entity, $field)){
         $self->render(json=>{error => "attribute is not valid"}, status=>400);
     }
-    
     elsif($self->users->check_authorized($userid, "PUT", $entity, $object_id)){
-        my $filename = $self->generate_filename;
+	my $extension;
         if($type eq "image/png"){
-            $filename .= ".png";
+            $extension = ".png";
         }elsif($type eq "image/jpeg"){
-            $filename .= ".jpg";
+            $extension = ".jpg";
         }elsif($type eq "video/mp4"){
-	    $filename .= ".mov";
+	    $extension = ".mov";
+	}elsif($type eq "application/pdf"){
+	    $extension = ".pdf";
 	}
+
         my $imagedir = $self->config->{"images"}->{"local_path"};
-        $image->move_to($imagedir . "/" . $filename);
+	my $filename = $self->generate_unique_filename($imagedir, $extension);
+	my $filepath = $imagedir . "/" . $filename;
+
+        $image->move_to($filepath);
         my $url =  $self->config->{"images"}->{"url_prefix"};
         if($url !~ /\/$/){
             $url .= "/";
         }
         $url .= "$filename";
         $self->set_url($url, $entity, $object_id, $field);
-        $self->render(json=>{url => $url}, status=>201);
+        $self->render(json=>{$entity =>{$field => $url}}, status=>201);
     }else{
-        $self->render(json=>{error => "Not authorized to GET $entity/$object_id"}, status=>403);
+        $self->render(json=>{error => "Not authorized to Modify $entity/$object_id"}, status=>403);
     }
 }
 
-sub generate_filename{
+sub generate_unique_filename($$){
+    my ($self, $path, $extension) = @_;
+    while(1){
+	my $filename =  $self->generate_filename . $extension;
+	my $testPath = $path . "/" . $filename;
+	unless(-e $testPath){
+	    return $filename;
+	}
+    }
+}
+
+sub generate_filename(){
     my $ug = new Data::UUID;
     my $filename = $ug->create_b64();
     $filename =~ s/[^\w]/a/g;
