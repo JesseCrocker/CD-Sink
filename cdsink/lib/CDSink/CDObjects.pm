@@ -100,9 +100,6 @@ sub get_object($$$){
 	    delete $object{$attributes{$field}->{"sql_field"}};
 	    $object{$attributes{$field}->{"original_name"}} = $value;
 	}
-	if($field eq "date"){
-	    $object{$field} .= " +0000";
-	}
     }
         
     my %relationships = %{$entity_config{'relationships'}};

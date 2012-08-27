@@ -73,7 +73,7 @@ sub setup_database_connection{
             dsn      => "DBI:mysql:$db:$dbserver",
             username => $dbuser,
             password => $dbpassword,
-            options  => {timezone => "UTC"},
+            options  => {},
             helper   => 'dbh',
 		  });
 }
