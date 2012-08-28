@@ -30,3 +30,11 @@ create table deletes(
     userid INT,
     date TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+drop table pushDevice;
+CREATE TABLE `pushDevice` (
+  `deviceToken` varchar(64) NOT NULL,
+  `udid` varchar(64),
+  `userid` int(11) NOT NULL,
+  PRIMARY KEY (`deviceToken`)
+);
