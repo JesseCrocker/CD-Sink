@@ -264,8 +264,7 @@ sub generate_sql{
     foreach my $entity_name(sort(keys(%model))){
         my %entity = %{$model{$entity_name}};
         my %attributes = %{$entity{"attributes"}};
-        my @attribute_keys = sort(keys(%attributes));
-        
+               
         my $id_field = $config{"primary_keys"}->{$entity_name};
         if(!$id_field){
             $id_field = $entity_name . "_id";
@@ -292,15 +291,20 @@ sub generate_sql{
             }
         }
         
+	my @attribute_keys;
+	foreach my $attribute_name (sort(keys(%attributes)) ){
+	    my %attribute = %{$attributes{$attribute_name}};
+            if($attribute_name eq $id_field || $attribute{"sql_field"} eq $id_field){
+                next;
+            }
+	    push(@attribute_keys, $attribute_name);	    
+	}
+
         for(my $i = 0; $i <= $#attribute_keys; $i++){
             my $attribute_name = $attribute_keys[$i];
         
             my %attribute = %{$attributes{$attribute_name}};
             my $sql_line = "\t" . $attribute{"sql_field"} . " " . $attribute{"type"};
-            
-            if($attribute_name eq $id_field || $attribute{"sql_field"} eq $id_field){
-                next;
-            }
             
             if(!$attribute{"optional"}){
                 $sql_line .= "NOT NULL";
