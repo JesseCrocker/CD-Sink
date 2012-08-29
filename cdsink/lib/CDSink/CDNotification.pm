@@ -33,8 +33,6 @@ sub new{
 	apns => $apns
     };
     bless $self, $class;
-
-    $self->send_alert_to_user(1, "working?");
     return $self;
 }
 
