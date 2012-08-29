@@ -5,6 +5,7 @@ use JSON;
 use CDSink::CDUser;
 use CDSink::CDMessages;
 use CDSink::CDObjects;
+use CDSink::CDNotification;
 use Data::Dumper;
 use Mojo::Loader;
 use Mojolicious::Plugin::Database;
@@ -33,6 +34,8 @@ sub startup {
     $object_manager->{model} = $self->model;
     $self->helper(object_manager => sub { return $object_manager });
 
+    $self->start_apns;
+
     $self->setup_basic_routes;
     $self->setup_user_routes;
     $self->setup_object_routes;
@@ -40,6 +43,7 @@ sub startup {
     $self->setup_image_routes;
     $self->load_app_helpers;
     $self->load_app_controllers;
+
 }
 
 sub load_config{
@@ -137,6 +141,12 @@ sub load_app_controllers{
     }
 }
 
+sub start_apns{
+    my $self = shift;
+    my $apns = CDSink::CDNotification->new($self->app);
+    $self->helper(apns => sub { return $apns });
+}
+
 #setup routes
 sub setup_basic_routes{
     my $self = shift;
@@ -145,6 +155,12 @@ sub setup_basic_routes{
         my $self = shift;
         $self->render(json => {message => "CD Sink version 1.0"}, status=>200);
     });
+
+    $r->get("/pushtest" => sub{
+	my $self = shift;
+	$self->apns->send_alert_to_user(1, "message");
+	$self->render(json => {message => "sending push notification"}, status=>200);
+	    });
 }
 
 sub setup_object_routes{
@@ -180,6 +196,8 @@ sub setup_user_routes{
     $r->any('/login')->to(controller => "Login", action=>"login");
     $r->any('/logout')->to(controller => "Login", action=>"logout");
     $r->delete('/user')->to(controller => "Login", action=>"delete_user");
+
+    $r->post('/user/push')->to(controller => "Push", action=>"set_device_token");
 }
 
 sub setup_sync_routes{

@@ -61,6 +61,7 @@ Refer to Mojolicious documentation for information about deploying mojolicious.
 * XML::Simple
 * JSON
 * Data::UUID
+* Net::APNS::Persistent
 
 ## routes for sync:
 * /deletes
